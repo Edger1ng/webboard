@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+<head>
+  <meta charset="utf-8">
+  <title>Local Web Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#0f1115" id="metaTheme">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack-all.js"></script>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="appbar">
+    <div class="appbar-left">
+      <h1>Local Web Dashboard</h1>
+    </div>
+    <div class="appbar-right">
+      <button id="themeToggle" class="btn tonal"></button>
+      <button id="editToggle" class="btn filled">Edit</button>
+      <button id="saveLayout" class="btn tonal">Save</button>
+      <select id="presetSelect" class="field">
+        <option value="">Presets</option>
+      </select>
+      <button id="savePreset" class="btn tonal">Save Preset</button>
+      <button id="deletePreset" class="btn outline">Delete Preset</button>
+      <a href="/logout" class="btn text">Logout</a>
+    </div>
+  </header>
+
+  <section class="metrics">
+    <div class="chip"><span id="cpu-total">–</span><small>CPU %</small></div>
+    <div class="chip"><span id="ram-percent">–</span><small>RAM %</small></div>
+    <div class="chip"><span id="net-up">–</span><small>Up Mbit/s</small></div>
+    <div class="chip"><span id="net-down">–</span><small>Down Mbit/s</small></div>
+    <div class="chip"><span id="disk-percent">–</span><small>Disk %</small></div>
+    <div class="chip"><span id="temp">–</span><small>°C</small></div>
+  </section>
+
+  <main>
+    <div class="grid-stack" id="grid"></div>
+  </main>
+
+  <footer class="footer">
+    <small>Editable dashboard with drag, resize and presets</small>
+  </footer>
+
+  <script>
+    function themeApply(mode){
+      const root=document.documentElement;
+      const meta=document.getElementById('metaTheme');
+      if(mode==='system'){root.dataset.theme='system';const mq=window.matchMedia('(prefers-color-scheme: dark)');root.classList.toggle('dark',mq.matches);root.classList.toggle('light',!mq.matches);meta.content=getComputedStyle(document.body).getPropertyValue('--sys-bg').trim();return;}
+      root.dataset.theme=mode; root.classList.toggle('dark',mode==='dark'); root.classList.toggle('light',mode==='light'); meta.content=getComputedStyle(document.body).getPropertyValue('--sys-bg').trim();
+    }
+    function themeInit(){
+      const stored=localStorage.getItem('theme')||'system';
+      themeApply(stored);
+      const btn=document.getElementById('themeToggle');
+      function label(){const m=localStorage.getItem('theme')||'system';btn.textContent=m==='system'?'System':'Theme: '+m.charAt(0).toUpperCase()+m.slice(1);}
+      label();
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if((localStorage.getItem('theme')||'system')==='system')themeApply('system');});
+      btn.addEventListener('click',()=>{
+        const cur=localStorage.getItem('theme')||'system';
+        const next=cur==='system'?'light':cur==='light'?'dark':'system';
+        localStorage.setItem('theme',next);
+        themeApply(next);
+        label();
+      });
+    }
+    themeInit();
+  </script>
+
+  <script>
+    window.PLUGIN_WIDGETS = [];
+    window.PLUGINS = [];
+    fetch('/api/plugins', {cache: 'no-store'})
+      .then(r => r.json())
+      .then(list => {
+        window.PLUGINS = list || [];
+        for (const p of window.PLUGINS) {
+          if (Array.isArray(p.styles)) for (const h of p.styles) { const l=document.createElement('link'); l.rel='stylesheet'; l.href=h; document.head.appendChild(l); }
+          if (Array.isArray(p.scripts)) for (const s of p.scripts) { const sc=document.createElement('script'); sc.src=s; document.body.appendChild(sc); }
+        }
+      })
+      .finally(() => {
+        const main = document.createElement('script');
+        main.src = '/static/main.js';
+        document.body.appendChild(main);
+      });
+  </script>
+</body>
+</html>
