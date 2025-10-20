@@ -20,6 +20,7 @@
   <div class="wrap">
     <form method="post" action="/login">
       <h1>Local Web Dashboard</h1>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>Username</label>
       <input name="username" required>
       <label>Password</label>

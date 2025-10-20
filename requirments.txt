@@ -1,0 +1,5 @@
+Flask>=3.0
+Flask-WTF>=1.2
+psutil
+Werkzeug>=3.0
+

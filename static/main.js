@@ -8,9 +8,25 @@ function card(title, inner){
   c.appendChild(head);
   const b=el('div','body'); if(typeof inner==='string'){b.innerHTML=inner;} else {b.appendChild(inner);} c.appendChild(b);
   return c;
+
+function readCookie(name){
+  const m=document.cookie.match(new RegExp('(^|; )'+name+'=([^;]*)'));
+  return m?decodeURIComponent(m[2]):'';
 }
 
-async function api(u, opts){const r=await fetch(u,Object.assign({cache:'no-store'},opts||{}));if(!r.ok)throw new Error(r.statusText);return r.json();}
+async function api(u, opts){
+  const h=(opts&&opts.headers)?opts.headers:{};
+  const csrf=readCookie('csrf_token');
+  const isUnsafe=(opts&&opts.method)&&!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(opts.method);
+  const headers=Object.assign({}, h, isUnsafe?{'X-CSRFToken':csrf}:{});
+  const r=await fetch(u,Object.assign({cache:'no-store',headers:headers},opts||{}));
+  if(!r.ok) throw new Error(r.statusText);
+  const ct=r.headers.get('content-type')||'';
+  if(ct.includes('application/json')) return r.json();
+  return r.text();
+}
+
+
 async function getLayout(){return api('/api/layout');}
 async function saveLayout(layout){return api('/api/layout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(layout)});}
 async function getPresets(){return api('/api/presets');}

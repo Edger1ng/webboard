@@ -3,13 +3,16 @@ import time
 import pathlib
 import importlib.util
 import sqlite3
-import secrets
 import psutil
 import threading
+import secrets as _secrets
 from datetime import timedelta
-from flask import Flask, jsonify, render_template, request, redirect, url_for, session, abort, Blueprint
+from flask import Flask, jsonify, render_template, request, redirect, url_for, session, abort, Blueprint, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
-
+from flask_wtf import CSRFProtect
+from flask_wtf.csrf import generate_csrf
+from config import load_from_env
+from dotenv import load_dotenv
 BASE_DIR = pathlib.Path(__file__).parent
 DB_PATH = BASE_DIR / "dashboard.db"
 
@@ -17,8 +20,11 @@ SAMPLE_INTERVAL_SEC = 5
 RETENTION_HOURS = 168
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
-app.secret_key = secrets.token_hex(32)
+load_dotenv()
+load_from_env(app)
 app.permanent_session_lifetime = timedelta(days=14)
+
+csrf = CSRFProtect(app)
 
 plugins_dir = BASE_DIR / "plugins"
 _loaded_plugins = []
@@ -163,6 +169,21 @@ def sampler_loop():
 @app.before_request
 def sess():
     session.permanent = True
+
+@app.after_request
+def set_csrf_cookie(resp):
+    try:
+        token = generate_csrf()
+        resp.set_cookie(
+            "csrf_token",
+            token,
+            secure=app.config.get("SESSION_COOKIE_SECURE", False),
+            httponly=False,
+            samesite=app.config.get("SESSION_COOKIE_SAMESITE", "Lax"),
+        )
+    except Exception:
+        pass
+    return resp
 
 @app.route("/login", methods=["GET","POST"])
 def login():
